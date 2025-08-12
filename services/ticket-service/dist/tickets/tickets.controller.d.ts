@@ -1,0 +1,265 @@
+import { TicketsService, CreateTicketDto, UpdateTicketDto, TicketQuery } from './tickets.service';
+import { Priority, TicketStatus } from '@prisma/client';
+export declare class TicketsController {
+    private readonly ticketsService;
+    constructor(ticketsService: TicketsService);
+    create(createTicketDto: CreateTicketDto, req: any): Promise<{
+        type: import(".prisma/client").$Enums.TicketType;
+        description: string | null;
+        title: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        ticketNumber: string;
+        priority: import(".prisma/client").$Enums.Priority;
+        status: import(".prisma/client").$Enums.TicketStatus;
+        category: string | null;
+        subcategory: string | null;
+        createdById: string;
+        assignedToId: string | null;
+        teamId: string | null;
+        slaLevel: import(".prisma/client").$Enums.SlaLevel;
+        dueDate: Date | null;
+        resolutionDate: Date | null;
+        firstResponseDate: Date | null;
+        impact: import(".prisma/client").$Enums.Impact;
+        urgency: import(".prisma/client").$Enums.Urgency;
+        source: import(".prisma/client").$Enums.TicketSource;
+        customerSatisfaction: number | null;
+        rootCause: string | null;
+        preventiveMeasures: string | null;
+        changeType: import(".prisma/client").$Enums.ChangeType | null;
+        riskLevel: import(".prisma/client").$Enums.RiskLevel | null;
+        rollbackPlan: string | null;
+    }>;
+    findAll(query: TicketQuery): Promise<{
+        tickets: import(".prisma/client").Ticket[];
+        total: number;
+        page: number;
+        totalPages: number;
+    }>;
+    getStats(req: any, userId?: string): Promise<{
+        total: number;
+        open: number;
+        inProgress: number;
+        resolved: number;
+        overdue: number;
+        highPriority: number;
+        critical: number;
+    }>;
+    getMyTickets(req: any, query: Omit<TicketQuery, 'assignedToId'>): Promise<{
+        tickets: import(".prisma/client").Ticket[];
+        total: number;
+        page: number;
+        totalPages: number;
+    }>;
+    getCreatedTickets(req: any, query: Omit<TicketQuery, 'createdById'>): Promise<{
+        tickets: import(".prisma/client").Ticket[];
+        total: number;
+        page: number;
+        totalPages: number;
+    }>;
+    findOne(id: string): Promise<{
+        type: import(".prisma/client").$Enums.TicketType;
+        description: string | null;
+        title: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        ticketNumber: string;
+        priority: import(".prisma/client").$Enums.Priority;
+        status: import(".prisma/client").$Enums.TicketStatus;
+        category: string | null;
+        subcategory: string | null;
+        createdById: string;
+        assignedToId: string | null;
+        teamId: string | null;
+        slaLevel: import(".prisma/client").$Enums.SlaLevel;
+        dueDate: Date | null;
+        resolutionDate: Date | null;
+        firstResponseDate: Date | null;
+        impact: import(".prisma/client").$Enums.Impact;
+        urgency: import(".prisma/client").$Enums.Urgency;
+        source: import(".prisma/client").$Enums.TicketSource;
+        customerSatisfaction: number | null;
+        rootCause: string | null;
+        preventiveMeasures: string | null;
+        changeType: import(".prisma/client").$Enums.ChangeType | null;
+        riskLevel: import(".prisma/client").$Enums.RiskLevel | null;
+        rollbackPlan: string | null;
+    }>;
+    canEdit(id: string, req: any): Promise<{
+        canEdit: boolean;
+    }>;
+    update(id: string, updateTicketDto: UpdateTicketDto, req: any): Promise<{
+        type: import(".prisma/client").$Enums.TicketType;
+        description: string | null;
+        title: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        ticketNumber: string;
+        priority: import(".prisma/client").$Enums.Priority;
+        status: import(".prisma/client").$Enums.TicketStatus;
+        category: string | null;
+        subcategory: string | null;
+        createdById: string;
+        assignedToId: string | null;
+        teamId: string | null;
+        slaLevel: import(".prisma/client").$Enums.SlaLevel;
+        dueDate: Date | null;
+        resolutionDate: Date | null;
+        firstResponseDate: Date | null;
+        impact: import(".prisma/client").$Enums.Impact;
+        urgency: import(".prisma/client").$Enums.Urgency;
+        source: import(".prisma/client").$Enums.TicketSource;
+        customerSatisfaction: number | null;
+        rootCause: string | null;
+        preventiveMeasures: string | null;
+        changeType: import(".prisma/client").$Enums.ChangeType | null;
+        riskLevel: import(".prisma/client").$Enums.RiskLevel | null;
+        rollbackPlan: string | null;
+    }>;
+    addComment(id: string, body: {
+        content: string;
+        isInternal?: boolean;
+    }, req: any): Promise<{
+        user: {
+            email: string;
+            firstName: string;
+            lastName: string;
+            id: string;
+        };
+    } & {
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        userId: string;
+        content: string;
+        ticketId: string;
+        isInternal: boolean;
+    }>;
+    addTimeEntry(id: string, body: {
+        timeSpent: number;
+        description?: string;
+        billable?: boolean;
+    }, req: any): Promise<{
+        user: {
+            email: string;
+            firstName: string;
+            lastName: string;
+            id: string;
+        };
+    } & {
+        description: string | null;
+        id: string;
+        createdAt: Date;
+        userId: string;
+        ticketId: string;
+        timeSpent: number;
+        billable: boolean;
+        startTime: Date;
+        endTime: Date | null;
+    }>;
+    assignTicket(id: string, body: {
+        assignedToId: string;
+    }, req: any): Promise<{
+        type: import(".prisma/client").$Enums.TicketType;
+        description: string | null;
+        title: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        ticketNumber: string;
+        priority: import(".prisma/client").$Enums.Priority;
+        status: import(".prisma/client").$Enums.TicketStatus;
+        category: string | null;
+        subcategory: string | null;
+        createdById: string;
+        assignedToId: string | null;
+        teamId: string | null;
+        slaLevel: import(".prisma/client").$Enums.SlaLevel;
+        dueDate: Date | null;
+        resolutionDate: Date | null;
+        firstResponseDate: Date | null;
+        impact: import(".prisma/client").$Enums.Impact;
+        urgency: import(".prisma/client").$Enums.Urgency;
+        source: import(".prisma/client").$Enums.TicketSource;
+        customerSatisfaction: number | null;
+        rootCause: string | null;
+        preventiveMeasures: string | null;
+        changeType: import(".prisma/client").$Enums.ChangeType | null;
+        riskLevel: import(".prisma/client").$Enums.RiskLevel | null;
+        rollbackPlan: string | null;
+    }>;
+    updateStatus(id: string, body: {
+        status: TicketStatus;
+    }, req: any): Promise<{
+        type: import(".prisma/client").$Enums.TicketType;
+        description: string | null;
+        title: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        ticketNumber: string;
+        priority: import(".prisma/client").$Enums.Priority;
+        status: import(".prisma/client").$Enums.TicketStatus;
+        category: string | null;
+        subcategory: string | null;
+        createdById: string;
+        assignedToId: string | null;
+        teamId: string | null;
+        slaLevel: import(".prisma/client").$Enums.SlaLevel;
+        dueDate: Date | null;
+        resolutionDate: Date | null;
+        firstResponseDate: Date | null;
+        impact: import(".prisma/client").$Enums.Impact;
+        urgency: import(".prisma/client").$Enums.Urgency;
+        source: import(".prisma/client").$Enums.TicketSource;
+        customerSatisfaction: number | null;
+        rootCause: string | null;
+        preventiveMeasures: string | null;
+        changeType: import(".prisma/client").$Enums.ChangeType | null;
+        riskLevel: import(".prisma/client").$Enums.RiskLevel | null;
+        rollbackPlan: string | null;
+    }>;
+    updatePriority(id: string, body: {
+        priority: Priority;
+    }, req: any): Promise<{
+        type: import(".prisma/client").$Enums.TicketType;
+        description: string | null;
+        title: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        ticketNumber: string;
+        priority: import(".prisma/client").$Enums.Priority;
+        status: import(".prisma/client").$Enums.TicketStatus;
+        category: string | null;
+        subcategory: string | null;
+        createdById: string;
+        assignedToId: string | null;
+        teamId: string | null;
+        slaLevel: import(".prisma/client").$Enums.SlaLevel;
+        dueDate: Date | null;
+        resolutionDate: Date | null;
+        firstResponseDate: Date | null;
+        impact: import(".prisma/client").$Enums.Impact;
+        urgency: import(".prisma/client").$Enums.Urgency;
+        source: import(".prisma/client").$Enums.TicketSource;
+        customerSatisfaction: number | null;
+        rootCause: string | null;
+        preventiveMeasures: string | null;
+        changeType: import(".prisma/client").$Enums.ChangeType | null;
+        riskLevel: import(".prisma/client").$Enums.RiskLevel | null;
+        rollbackPlan: string | null;
+    }>;
+    getEnums(): {
+        ticketTypes: ("INCIDENT" | "SERVICE_REQUEST" | "PROBLEM" | "CHANGE")[];
+        priorities: ("CRITICAL" | "HIGH" | "MEDIUM" | "LOW")[];
+        statuses: ("NEW" | "OPEN" | "IN_PROGRESS" | "PENDING_USER" | "PENDING_VENDOR" | "RESOLVED" | "CLOSED" | "CANCELLED")[];
+        impacts: ("CRITICAL" | "HIGH" | "MEDIUM" | "LOW")[];
+        urgencies: ("CRITICAL" | "HIGH" | "MEDIUM" | "LOW")[];
+        sources: ("WEB" | "EMAIL" | "PHONE" | "CHAT" | "API")[];
+    };
+}

@@ -1,0 +1,117 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Comment {
+  id            String   @id @default(cuid())
+  content       String
+  contentType   ContentType @default(TEXT)
+  
+  // Context - what is being commented on
+  entityType    EntityType // TICKET, PROJECT, TASK, etc.
+  entityId      String
+  
+  // Ownership
+  authorId      String
+  
+  // Threading for replies
+  parentId      String?
+  threadId      String? // Root comment ID for grouping
+  
+  // Status and moderation
+  status        CommentStatus @default(ACTIVE)
+  isEdited      Boolean  @default(false)
+  editedAt      DateTime?
+  
+  // Metadata
+  attachmentUrls String[] // Array of file URLs
+  mentions      String[] // Array of user IDs mentioned
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relationships
+  parent        Comment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies       Comment[] @relation("CommentReplies")
+  reactions     CommentReaction[]
+  
+  @@map("comments")
+  @@index([entityType, entityId])
+  @@index([authorId])
+  @@index([threadId])
+}
+
+model CommentReaction {
+  id        String   @id @default(cuid())
+  commentId String
+  userId    String
+  type      ReactionType
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  
+  // Relationships
+  comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  
+  @@unique([commentId, userId, type])
+  @@map("comment_reactions")
+}
+
+model CommentHistory {
+  id          String   @id @default(cuid())
+  commentId   String
+  content     String
+  editedById  String
+  editReason  String?
+  
+  // Timestamps
+  editedAt    DateTime @default(now())
+  
+  @@map("comment_history")
+  @@index([commentId])
+}
+
+// Enums
+enum EntityType {
+  TICKET
+  PROJECT
+  TASK
+  USER
+  APPLICATION
+  DOCUMENT
+}
+
+enum ContentType {
+  TEXT
+  MARKDOWN
+  HTML
+}
+
+enum CommentStatus {
+  ACTIVE
+  DELETED
+  HIDDEN
+  FLAGGED
+  MODERATED
+}
+
+enum ReactionType {
+  LIKE
+  DISLIKE
+  LOVE
+  LAUGH
+  ANGRY
+  SAD
+  THUMBS_UP
+  THUMBS_DOWN
+}

@@ -1,0 +1,359 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  username    String?  @unique
+  firstName   String?
+  lastName    String?
+  password    String
+  isActive    Boolean  @default(true)
+  isVerified  Boolean  @default(false)
+  role        Role     @default(CLIENT)
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastLoginAt DateTime?
+  
+  // Relationships
+  refreshTokens RefreshToken[]
+  sessions      Session[]
+  createdTickets Ticket[] @relation("CreatedByUser")
+  assignedTickets Ticket[] @relation("AssignedToUser")
+  ticketComments TicketComment[]
+  timeEntries   TimeEntry[]
+  
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  isRevoked Boolean  @default(false)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relationships
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("refresh_tokens")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  userAgent String?
+  ipAddress String?
+  expiresAt DateTime
+  isActive  Boolean  @default(true)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relationships
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("sessions")
+}
+
+model Permission {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String?
+  resource    String // e.g., 'ticket', 'project', 'user'
+  action      String // e.g., 'create', 'read', 'update', 'delete'
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relationships
+  rolePermissions RolePermission[]
+  
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String @id @default(cuid())
+  role         Role
+  permissionId String
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  
+  // Relationships
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  
+  @@unique([role, permissionId])
+  @@map("role_permissions")
+}
+
+// ITSM Models
+model Ticket {
+  id             String        @id @default(cuid())
+  ticketNumber   String        @unique // AUTO-generated: INC-001, REQ-001, etc.
+  title          String
+  description    String?
+  type           TicketType
+  priority       Priority      @default(MEDIUM)
+  status         TicketStatus  @default(NEW)
+  category       String?       // e.g., "Hardware", "Software", "Network"
+  subcategory    String?       // e.g., "Printer", "Email", "WiFi"
+  
+  // Assignment
+  createdById    String
+  assignedToId   String?
+  teamId         String?       // Optional: team assignment
+  
+  // SLA & Timing
+  slaLevel       SlaLevel      @default(STANDARD)
+  dueDate        DateTime?
+  resolutionDate DateTime?
+  firstResponseDate DateTime?
+  
+  // Additional Fields
+  impact         Impact        @default(LOW)
+  urgency        Urgency       @default(LOW)
+  source         TicketSource  @default(WEB)
+  customerSatisfaction Int?   // 1-5 rating
+  
+  // Root Cause Analysis (for incidents)
+  rootCause      String?
+  preventiveMeasures String?
+  
+  // Change Management (for change requests)
+  changeType     ChangeType?
+  riskLevel      RiskLevel?
+  rollbackPlan   String?
+  
+  // Timestamps
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  
+  // Relationships
+  createdBy      User          @relation("CreatedByUser", fields: [createdById], references: [id])
+  assignedTo     User?         @relation("AssignedToUser", fields: [assignedToId], references: [id])
+  comments       TicketComment[]
+  attachments    TicketAttachment[]
+  timeEntries    TimeEntry[]
+  auditLog       TicketAuditLog[]
+  relatedTickets TicketRelation[] @relation("ParentTicket")
+  parentTickets  TicketRelation[] @relation("RelatedTicket")
+  
+  @@map("tickets")
+}
+
+model TicketComment {
+  id          String   @id @default(cuid())
+  ticketId    String
+  userId      String
+  content     String
+  isInternal  Boolean  @default(false) // Internal notes vs customer-facing
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relationships
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id])
+  
+  @@map("ticket_comments")
+}
+
+model TicketAttachment {
+  id          String   @id @default(cuid())
+  ticketId    String
+  fileName    String
+  fileSize    Int
+  mimeType    String
+  filePath    String   // Path in MinIO/S3
+  uploadedBy  String
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  
+  // Relationships
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  
+  @@map("ticket_attachments")
+}
+
+model TimeEntry {
+  id          String   @id @default(cuid())
+  ticketId    String
+  userId      String
+  description String?
+  timeSpent   Int      // Minutes
+  billable    Boolean  @default(false)
+  
+  // Timestamps
+  startTime   DateTime
+  endTime     DateTime?
+  createdAt   DateTime @default(now())
+  
+  // Relationships
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id])
+  
+  @@map("time_entries")
+}
+
+model TicketAuditLog {
+  id          String   @id @default(cuid())
+  ticketId    String
+  userId      String?
+  action      String   // e.g., "STATUS_CHANGE", "ASSIGNMENT", "COMMENT_ADDED"
+  oldValue    String?  // JSON string of old values
+  newValue    String?  // JSON string of new values
+  details     String?
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  
+  // Relationships
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  
+  @@map("ticket_audit_logs")
+}
+
+model TicketRelation {
+  id              String         @id @default(cuid())
+  parentTicketId  String
+  relatedTicketId String
+  relationType    RelationType
+  
+  // Timestamps
+  createdAt       DateTime       @default(now())
+  
+  // Relationships
+  parentTicket    Ticket         @relation("ParentTicket", fields: [parentTicketId], references: [id], onDelete: Cascade)
+  relatedTicket   Ticket         @relation("RelatedTicket", fields: [relatedTicketId], references: [id], onDelete: Cascade)
+  
+  @@unique([parentTicketId, relatedTicketId, relationType])
+  @@map("ticket_relations")
+}
+
+// SLA Configuration
+model SlaPolicy {
+  id              String    @id @default(cuid())
+  name            String    @unique
+  description     String?
+  level           SlaLevel
+  priority        Priority
+  
+  // Response times (in minutes)
+  responseTime    Int       // First response
+  resolutionTime  Int       // Full resolution
+  
+  // Business hours
+  businessHoursOnly Boolean @default(true)
+  
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@map("sla_policies")
+}
+
+// Enums
+enum Role {
+  ADMIN
+  SUPPORT_L1
+  SUPPORT_L2
+  SUPPORT_L3
+  DEVELOPER
+  PROJECT_MANAGER
+  CLIENT
+}
+
+enum TicketType {
+  INCIDENT       // Something is broken
+  SERVICE_REQUEST // Request for service
+  PROBLEM        // Root cause investigation
+  CHANGE         // Change management
+}
+
+enum Priority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum TicketStatus {
+  NEW
+  OPEN
+  IN_PROGRESS
+  PENDING_USER
+  PENDING_VENDOR
+  RESOLVED
+  CLOSED
+  CANCELLED
+}
+
+enum Impact {
+  CRITICAL  // Multiple users/systems affected
+  HIGH      // Single user/system significantly affected
+  MEDIUM    // Single user/system moderately affected
+  LOW       // Minimal impact
+}
+
+enum Urgency {
+  CRITICAL  // Immediate attention required
+  HIGH      // Attention required within hours
+  MEDIUM    // Attention required within day
+  LOW       // Can wait
+}
+
+enum SlaLevel {
+  PREMIUM
+  STANDARD
+  BASIC
+}
+
+enum TicketSource {
+  WEB
+  EMAIL
+  PHONE
+  CHAT
+  API
+}
+
+enum ChangeType {
+  EMERGENCY
+  NORMAL
+  STANDARD
+}
+
+enum RiskLevel {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum RelationType {
+  DUPLICATE
+  RELATED
+  BLOCKS
+  CAUSED_BY
+  CHILD_OF
+}

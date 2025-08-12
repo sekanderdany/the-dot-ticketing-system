@@ -1,0 +1,63 @@
+{
+  "name": "the-dot",
+  "version": "1.0.0",
+  "description": "Modern IT Service Management & Project Management System",
+  "main": "index.js",
+  "scripts": {
+    "install:all": "npm install && npm run install:services && npm run install:frontend",
+    "install:services": "cd services/auth-service && npm install && cd ../user-service && npm install && cd ../application-service && npm install && cd ../ticket-service && npm install && cd ../project-service && npm install && cd ../comment-service && npm install && cd ../reporting-service && npm install && cd ../audit-service && npm install",
+    "install:frontend": "cd frontend && npm install",
+    "dev": "concurrently \"npm run dev:services\" \"npm run dev:frontend\"",
+    "dev:services": "concurrently \"npm run dev:auth\" \"npm run dev:user\" \"npm run dev:app\" \"npm run dev:ticket\" \"npm run dev:project\" \"npm run dev:comment\" \"npm run dev:reporting\" \"npm run dev:audit\"",
+    "dev:auth": "cd services/auth-service && npm run start:dev",
+    "dev:user": "cd services/user-service && npm run start:dev",
+    "dev:app": "cd services/application-service && npm run start:dev",
+    "dev:ticket": "cd services/ticket-service && npm run start:dev",
+    "dev:project": "cd services/project-service && npm run start:dev",
+    "dev:comment": "cd services/comment-service && npm run start:dev",
+    "dev:reporting": "cd services/reporting-service && npm run start:dev",
+    "dev:audit": "cd services/audit-service && npm run start:dev",
+    "dev:frontend": "cd frontend && npm start",
+    "build": "npm run build:services && npm run build:frontend",
+    "build:services": "cd services/auth-service && npm run build && cd ../user-service && npm run build && cd ../application-service && npm run build && cd ../ticket-service && npm run build && cd ../project-service && npm run build && cd ../comment-service && npm run build && cd ../reporting-service && npm run build && cd ../audit-service && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "test": "npm run test:services && npm run test:frontend",
+    "test:services": "cd services/auth-service && npm test && cd ../user-service && npm test && cd ../application-service && npm test && cd ../ticket-service && npm test && cd ../project-service && npm test && cd ../comment-service && npm test && cd ../reporting-service && npm test && cd ../audit-service && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "docker:build": "docker-compose -f docker-compose.prod.yml build",
+    "docker:up": "docker-compose -f docker-compose.prod.yml up -d",
+    "docker:down": "docker-compose -f docker-compose.prod.yml down",
+    "k8s:deploy": "kubectl apply -f k8s/",
+    "k8s:delete": "kubectl delete -f k8s/",
+    "helm:install": "helm install the-dot ./helm/the-dot",
+    "helm:upgrade": "helm upgrade the-dot ./helm/the-dot",
+    "helm:uninstall": "helm uninstall the-dot"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-org/the-dot.git"
+  },
+  "keywords": [
+    "itsm",
+    "project-management",
+    "microservices",
+    "kubernetes",
+    "jira-alternative",
+    "service-desk",
+    "ticketing-system"
+  ],
+  "author": "The Dot Team",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/your-org/the-dot/issues"
+  },
+  "homepage": "https://github.com/your-org/the-dot#readme",
+  "devDependencies": {
+    "concurrently": "^7.6.0",
+    "cross-env": "^7.0.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}

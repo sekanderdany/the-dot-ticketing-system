@@ -1,0 +1,222 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  username    String?  @unique
+  firstName   String?
+  lastName    String?
+  password    String
+  isActive    Boolean  @default(true)
+  isVerified  Boolean  @default(false)
+  role        Role     @default(CLIENT)
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastLoginAt DateTime?
+  
+  // Relationships
+  refreshTokens RefreshToken[]
+  sessions      Session[]
+  
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  isRevoked Boolean  @default(false)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relationships
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("refresh_tokens")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  userAgent String?
+  ipAddress String?
+  expiresAt DateTime
+  isActive  Boolean  @default(true)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relationships
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("sessions")
+}
+
+model Permission {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String?
+  resource    String // e.g., 'ticket', 'project', 'user'
+  action      String // e.g., 'create', 'read', 'update', 'delete'
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relationships
+  rolePermissions RolePermission[]
+  
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String @id @default(cuid())
+  role         Role
+  permissionId String
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  
+  // Relationships
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  
+  @@unique([role, permissionId])
+  @@map("role_permissions")
+}
+
+model Application {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  status      ApplicationStatus @default(ACTIVE)
+  version     String?
+  
+  // Ownership and management
+  ownerId     String
+  managerId   String?
+  
+  // Technical details
+  repository  String?
+  technology  String?
+  environment ApplicationEnvironment @default(DEVELOPMENT)
+  
+  // Metadata
+  isActive    Boolean  @default(true)
+  isArchived  Boolean  @default(false)
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relationships
+  teams       ApplicationTeam[]
+  
+  @@map("applications")
+}
+
+model Team {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  
+  // Management
+  leaderId    String?
+  
+  // Support tiers
+  supportL1   String[] // Array of user IDs
+  supportL2   String[] // Array of user IDs  
+  supportL3   String[] // Array of user IDs
+  
+  // Metadata
+  isActive    Boolean  @default(true)
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relationships
+  applications ApplicationTeam[]
+  members     TeamMember[]
+  
+  @@map("teams")
+}
+
+model TeamMember {
+  id       String   @id @default(cuid())
+  teamId   String
+  userId   String
+  role     TeamRole @default(MEMBER)
+  
+  // Timestamps
+  joinedAt DateTime @default(now())
+  leftAt   DateTime?
+  
+  // Relationships
+  team     Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  @@unique([teamId, userId])
+  @@map("team_members")
+}
+
+model ApplicationTeam {
+  id            String @id @default(cuid())
+  applicationId String
+  teamId        String
+  
+  // Timestamps
+  assignedAt    DateTime @default(now())
+  
+  // Relationships
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  team          Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  @@unique([applicationId, teamId])
+  @@map("application_teams")
+}
+
+enum ApplicationStatus {
+  ACTIVE
+  MAINTENANCE
+  DEPRECATED
+  RETIRED
+}
+
+enum ApplicationEnvironment {
+  DEVELOPMENT
+  STAGING
+  PRODUCTION
+}
+
+enum TeamRole {
+  LEADER
+  MEMBER
+  OBSERVER
+}
+
+enum Role {
+  ADMIN
+  SUPPORT_L1
+  SUPPORT_L2
+  SUPPORT_L3
+  DEVELOPER
+  PROJECT_MANAGER
+  CLIENT
+}

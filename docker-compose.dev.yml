@@ -1,0 +1,315 @@
+version: '3.8'
+
+services:
+  # Infrastructure Services
+  postgres:
+    image: postgres:14-alpine
+    container_name: the-dot-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: the_dot
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql
+    networks:
+      - the-dot-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: the-dot-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - the-dot-network
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: the-dot-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - the-dot-network
+
+  minio:
+    image: minio/minio:latest
+    container_name: the-dot-minio
+    environment:
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - the-dot-network
+
+  # API Gateway
+  nginx:
+    image: nginx:alpine
+    container_name: the-dot-gateway
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/nginx.conf
+      - ./gateway/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - auth-service
+      - user-service
+      - application-service
+      - ticket-service
+      - project-service
+      - comment-service
+      - reporting-service
+      - audit-service
+    networks:
+      - the-dot-network
+
+  # Microservices
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile.dev
+    container_name: the-dot-auth
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/auth_db
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: 6bea62d804d4fb412ad145a5cfa252f14459a82b87acbfa23734359427f4ac565aca3a74a74e1745e1dbbba047a66e44079317132e0be481a55102badf01255e
+      JWT_REFRESH_SECRET: 49947abee41dbcca4e80ce06095ee9e81bf8880e2aaad738400337e62f98a2d64f14e32988ac3c12c37f46077e3ada3dbd860e9e41aecd4cb2640e0ae70abdaa4
+    # ports:
+      # - "3001:3001"
+    volumes:
+      - ./services/auth-service:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - the-dot-network
+
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile.dev
+    container_name: the-dot-user
+    environment:
+      NODE_ENV: development
+      PORT: 3002
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/user_db
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://admin:admin123@rabbitmq:5672
+      JWT_SECRET: 6bea62d804d4fb412ad145a5cfa252f14459a82b87acbfa23734359427f4ac565aca3a74a74e1745e1dbbba047a66e44079317132e0be481a55102badf01255e
+    # ports:
+      # - "3002:3002"
+    volumes:
+      - ./services/user-service:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    networks:
+      - the-dot-network
+
+  application-service:
+    build:
+      context: ./services/application-service
+      dockerfile: Dockerfile.dev
+    container_name: the-dot-application
+    environment:
+      NODE_ENV: development
+      PORT: 3003
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/application_db
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://admin:admin123@rabbitmq:5672
+      JWT_SECRET: 6bea62d804d4fb412ad145a5cfa252f14459a82b87acbfa23734359427f4ac565aca3a74a74e1745e1dbbba047a66e44079317132e0be481a55102badf01255e
+    ports:
+      - "3003:3003"
+    volumes:
+      - ./services/application-service:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    networks:
+      - the-dot-network
+
+  ticket-service:
+    build:
+      context: ./services/ticket-service
+      dockerfile: Dockerfile.dev
+    container_name: the-dot-ticket
+    environment:
+      NODE_ENV: development
+      PORT: 3004
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ticket_db
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://admin:admin123@rabbitmq:5672
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      JWT_SECRET: 6bea62d804d4fb412ad145a5cfa252f14459a82b87acbfa23734359427f4ac565aca3a74a74e1745e1dbbba047a66e44079317132e0be481a55102badf01255e
+    # ports:
+      # - "3004:3004"
+    volumes:
+      - ./services/ticket-service:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+      - minio
+    networks:
+      - the-dot-network
+
+  project-service:
+    build:
+      context: ./services/project-service
+      dockerfile: Dockerfile.dev
+    container_name: the-dot-project
+    environment:
+      NODE_ENV: development
+      PORT: 3005
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/project_db
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://admin:admin123@rabbitmq:5672
+      JWT_SECRET: 6bea62d804d4fb412ad145a5cfa252f14459a82b87acbfa23734359427f4ac565aca3a74a74e1745e1dbbba047a66e44079317132e0be481a55102badf01255e
+    # ports:
+      # - "3005:3005"
+    volumes:
+      - ./services/project-service:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    networks:
+      - the-dot-network
+
+  comment-service:
+    build:
+      context: ./services/comment-service
+      dockerfile: Dockerfile.dev
+    container_name: the-dot-comment
+    environment:
+      NODE_ENV: development
+      PORT: 3006
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/comment_db
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://admin:admin123@rabbitmq:5672
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      JWT_SECRET: 6bea62d804d4fb412ad145a5cfa252f14459a82b87acbfa23734359427f4ac565aca3a74a74e1745e1dbbba047a66e44079317132e0be481a55102badf01255e
+    ports:
+      - "3006:3006"
+    volumes:
+      - ./services/comment-service:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+      - minio
+    networks:
+      - the-dot-network
+
+  reporting-service:
+    build:
+      context: ./services/reporting-service
+      dockerfile: Dockerfile.dev
+    container_name: the-dot-reporting
+    environment:
+      NODE_ENV: development
+      PORT: 3007
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/reporting_db
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://admin:admin123@rabbitmq:5672
+      JWT_SECRET: 6bea62d804d4fb412ad145a5cfa252f14459a82b87acbfa23734359427f4ac565aca3a74a74e1745e1dbbba047a66e44079317132e0be481a55102badf01255e
+      # Service URLs for data aggregation
+      AUTH_SERVICE_URL: http://auth-service:3001
+      USER_SERVICE_URL: http://user-service:3002
+      APPLICATION_SERVICE_URL: http://application-service:3003
+      TICKET_SERVICE_URL: http://ticket-service:3004
+      PROJECT_SERVICE_URL: http://project-service:3005
+    ports:
+      - "3007:3007"
+    volumes:
+      - ./services/reporting-service:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    networks:
+      - the-dot-network
+
+  audit-service:
+    build:
+      context: ./services/audit-service
+      dockerfile: Dockerfile.dev
+    container_name: the-dot-audit
+    environment:
+      NODE_ENV: development
+      PORT: 3008
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/audit_db
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://admin:admin123@rabbitmq:5672
+      JWT_SECRET: 6bea62d804d4fb412ad145a5cfa252f14459a82b87acbfa23734359427f4ac565aca3a74a74e1745e1dbbba047a66e44079317132e0be481a55102badf01255e
+    ports:
+      - "3008:3008"
+    volumes:
+      - ./services/audit-service:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    networks:
+      - the-dot-network
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: the-dot-frontend
+    environment:
+      NODE_ENV: development
+      REACT_APP_API_URL: http://localhost
+      REACT_APP_WEBSOCKET_URL: ws://localhost/ws
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - nginx
+    networks:
+      - the-dot-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  minio_data:
+
+networks:
+  the-dot-network:
+    driver: bridge
